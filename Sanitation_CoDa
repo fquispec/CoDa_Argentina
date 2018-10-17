@@ -1,7 +1,7 @@
 rm(list = ls())
 #library(imputeTS);library(tsoutliers)
 library(compositions); library(mgcv);library(hydroGOF);library(psych)
-setwd("C:/Users/Alejandro/Desktop/Tésis Doctoral/00.02.1 Falta de datos/14.10.18 Modelo/17.10.18_CoDa/r")
+setwd("............")
 
 
 file2<-"S_CoDa.csv"; 
