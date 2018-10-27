@@ -1,0 +1,119 @@
+rm(list = ls())
+#library(imputeTS);library(tsoutliers)
+library(compositions); library(mgcv);library(hydroGOF);library(psych);library(tsoutliers)
+setwd("C:/Users/Alejandro/Desktop/Tésis Doctoral/00.02.1 Falta de datos/14.10.18 Modelo/17.10.18_CoDa/r")
+
+
+file2<-"S_CoDa.csv"; 
+data2<-read.csv(file=file2, header=TRUE, sep = ";", dec = "."); 
+data3=data2[c(1:17),c(1:9)]
+kk<-4
+attach(data3)
+
+
+## 1.0 Transformando a ilr
+xx<-data3[c(1:17),c(6:9)]; ejex<-data3[,4]; 
+xx<-as.matrix(xx)
+signs <- rbind (c(-1,1,1,1),c( 0,1,1,-1),c(0,1,-1,0));VV=gsi.buildilrBase(t(signs))
+dd <- unclass(ilr(xx,VV))
+m=cbind(dd)
+data3=cbind(data3,m=m)
+boxplot(data3[,c(10:12)])
+
+#0.0 Detection Outliers with Boxplot
+boxplot(data3[,c(6:9)])
+
+#ILR1
+q1=quantile(data3[,10], prob=c(0.25));q3=quantile(data3[,10], prob=c(0.75))
+LI=q1-1.5*IQR(data3[,10]);LS=q3+1.5*IQR(data3[,10])
+x1=data3[,10][data3[,10]>LS];x2=data3[,10][data3[,10]<LI]
+out1=cbind(c(x1,x2))
+
+#ILR2
+q1=quantile(data3[,11], prob=c(0.25));q3=quantile(data3[,11], prob=c(0.75))
+LI2=q1-1.5*IQR(data3[,11]);LS2=q3+1.5*IQR(data3[,11])
+x3=data3[,11][data3[,11]>LS2];x4=data3[,11][data3[,11]<LI2]
+out2=cbind(c(x3,x4))
+
+#ILR3
+q1=quantile(data3[,12], prob=c(0.25));q3=quantile(data3[,12], prob=c(0.75))
+LI3=q1-1.5*IQR(data3[,12]);LS3=q3+1.5*IQR(data3[,12])
+x5=data3[,12][data3[,12]>LS3];x6=data3[,12][data3[,12]<LI3]
+out3=cbind(c(x5,x6))
+
+#latrines&other
+#1=quantile(data3[,9], prob=c(0.25));q3=quantile(data3[,9], prob=c(0.75))
+#LI4=q1-1.5*IQR(data3[,9]);LS4=q3+1.5*IQR(data3[,9])
+#x7=data3[,9][data3[,9]>LS4];x8=data3[,9][data3[,9]<LI4]
+#out4=cbind(c(x7,x8))
+
+out1
+out2
+out3
+#out4
+data3=edit(data3)
+boxplot(data3[,c(10:12)])
+
+#2.0 Graficando transformadas (ilr)
+data3=cbind(data3,dd=dd)
+attach(data3)
+plot(Year,dd.1,xlab="Year",ylab="ilr",pch=1, xlim=c(1990,2016), ylim=c(0,4))
+points(Year,dd.2,col="blue",pch=2)
+points(Year,dd.3,col="green",pch=3)
+legend("topleft",legend=c("dd.1","dd.2","dd.3"),col=c("black","blue","green"),pch=c(1,2,3))
+
+#2.1 Graficando transformadas (ilr)
+#Gráfica de ilr1
+gam  <- gam(dd.1 ~ s(Year,k=kk), family=gaussian);gam.pred1 <- predict.gam(gam)
+lines(Year,gam.pred1,type="l",lwd=c(2),col="black",lty=3)
+#Gráfica de ilr2
+gam  <- gam(dd.2 ~ s(Year,k=kk), family=gaussian);gam.pred2 <- predict.gam(gam)
+lines(Year,gam.pred2,type="l",lwd=c(2),col="black",lty=3)
+#Gráfica de ilr3
+gam  <- gam(dd.3 ~ s(Year,k=kk), family=gaussian);gam.pred3 <- predict.gam(gam)
+lines(Year,gam.pred3,type="l",lwd=c(2),col="black",lty=3)
+
+#3.0 Retornando transformadas estimadas
+zzz1<-ilrInv(array(cbind(gam.pred1,gam.pred2,gam.pred3),dim = c(length(gam.pred1),3)),VV)
+rilr1=zzz1[,1]*100
+rilr2=zzz1[,2]*100
+rilr3=zzz1[,3]*100
+rilr4=zzz1[,4]*100
+m=cbind(rilr1,rilr2,rilr3,rilr4)
+data3=cbind(data3,m=m)
+
+#4.0 Test de calidad (NSE, RMSE)
+#NSE y RMSE (Unimproved)
+NSE(data3[,13],data3[,6]);rmse(data3[,13],data3[,6])
+#NSE y RMSE (sewer)
+NSE(data3[,14],data3[,7]);rmse(data3[,14],data3[,7])
+#NSE y RMSE (séptic)
+NSE(data3[,15],data3[,8]);rmse(data3[,15],data3[,8])
+#NSE y RMSE (Improved_latrines_Other)
+NSE(data3[,16],data3[,9]);rmse(data3[,16],data3[,9])
+
+#5.0 Graficando Modelo Vs Valor_actual
+##5.01 Gráfica de valor_Actual
+plot(Year,data3[,6],xlab="Year",ylab="Cobertura",pch=1, xlim=c(1990,2016), ylim=c(0,100))
+points(Year,data3[,7],col="blue",pch=2)
+points(Year,data3[,8],col="green",pch=3)
+points(Year,data3[,9],col="red",pch=4)
+##5.01 Gráfica de Modelo
+points(Year,data3[,13],col="purple",pch=1)
+points(Year,data3[,14],col="purple",pch=2)
+points(Year,data3[,15],col="purple",pch=3)
+points(Year,data3[,16],col="purple",pch=4)
+legend("topleft",legend=c("Unimproved1","sewer1","séptic1","I_Latri_Oth1","M_Unimproved2","M_sewer2","M_séptic2","M_I_Latri_Oth2"),col=c("black","blue","green","red","purple","purple","purple","purple"),pch=c(1,2,3,4))
+
+
+#Pasando esimaciones a base de datos
+write.csv(data3,file="C:/Users/Alejandro/Desktop/Tésis Doctoral/00.02.1 Falta de datos/14.10.18 Modelo/17.10.18_CoDa/r/procesado_en_r.csv", sep = ";", dec = ".")
+
+
+
+##5.01 Gráfica de valor_Actual
+plot(Year,data3[,10],xlab="Year",ylab="Cobertura",pch=1, xlim=c(1990,2016), ylim=c(-3,4))
+points(Year,data3[,11],col="blue",pch=2)
+#points(Year,data3[,12],col="red",pch=3)
+points(Year,data3[,12],col="red",pch=3)
+legend("topleft",legend=c("ilr1","ilr2","ilr3"),col=c("black","blue","red"),pch=c(1,2,3))
